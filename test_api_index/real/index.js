@@ -102,3 +102,12 @@ export const deleteBinPhoto = (photoUrl) => {
     params: { url: photoUrl }
   });
 };
+
+// 12. 回收站恢复图片
+export const recoverBinPhoto = (photoUrl) => {
+  return request({
+    url: '/user/photos/bin',
+    method: 'post',
+    params: { url: photoUrl }
+  });
+};

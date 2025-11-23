@@ -221,3 +221,20 @@ export const deleteBinPhoto = (url) => {
     }, 500);
   });
 };
+
+// 12. 回收站恢复图片
+export const recoverBinPhoto = (url) => {
+  return new Promise((resolve) => {
+    console.log('>> [Mock] 恢复图片:', url);
+    
+    // 从回收站数组删掉
+    mockBinDB = mockBinDB.filter(item => item !== url);
+    
+    // 加回历史记录数组 (加到最前面)
+    mockHistoryDB.unshift(url); 
+
+    setTimeout(() => {
+      resolve({ code: 1, message: "success", data: null });
+    }, 500);
+  });
+};

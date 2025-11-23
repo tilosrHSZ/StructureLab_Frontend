@@ -1,5 +1,6 @@
 <template>
   <div class="login-container">
+    <div class="system-title">欢迎来到智能图库管理系统</div>
     <el-card class="box-card">
       <template #header>
         <div class="card-header">
@@ -95,11 +96,22 @@ const handleSubmit = async () => {
 
 <style scoped>
 .login-container {
+  flex-direction: column; 
   display: flex;
   justify-content: center;
   align-items: center;
   height: 100vh;
   background-color: #599f7c;
+}
+
+.system-title {
+  font-size: 35px;
+  font-weight: bold;
+  color: #e6dcdc;
+  margin-bottom: 50px;
+  letter-spacing: 3px;
+  text-shadow: 10px 10px 5px rgba(0, 0, 0, 0.1);
+  font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
 }
 .box-card {
   width: 400px;

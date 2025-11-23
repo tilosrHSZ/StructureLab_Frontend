@@ -2,7 +2,7 @@
     <div class="dashboard">
       <el-container>
         <el-header class="header">
-          <h2>Vue3 接口对接演示系统</h2>
+          <h2>智能图库管理系统</h2>
           <div>
             <span>欢迎, {{ userStore.name || userStore.username }}</span>
             <el-button type="danger" size="small" style="margin-left: 10px" @click="handleLogout">退出</el-button>
@@ -167,7 +167,8 @@
                   <div v-for="(url, index) in binList" :key="index" class="photo-item">
                     <el-image :src="url" fit="cover" :preview-src-list="[url]" style="width: 100%; height: 100%; opacity: 0.7;" />
                     <div class="photo-actions">
-                      <el-button type="danger" size="small" @click="handleDeleteBin(url)">彻底删除</el-button>
+                      <el-button type="success" size="small" :icon="RefreshLeft" @click="handleRecoverBin(url)" style="margin-right: 5px;">恢复</el-button>
+                      <el-button type="danger" size="small" :icon="Delete" @click="handleDeleteBin(url)">彻底删除</el-button>
                     </div>
                   </div>
                 </div>
@@ -186,7 +187,7 @@
   import { ref, reactive, onMounted } from 'vue';
   import { useUserStore } from '../stores/user';
   import { useRouter } from 'vue-router';
-  import { Minus, Delete, Refresh } from '@element-plus/icons-vue';
+  import { Minus, Delete, Refresh, RefreshLeft } from '@element-plus/icons-vue';
   import { ElMessage, ElNotification, ElMessageBox } from 'element-plus';
   import { 
     updateUser, 
@@ -197,7 +198,8 @@
     getHistoryPhotos,
     deleteHistoryPhoto,
     getRecycleBin,
-    deleteBinPhoto
+    deleteBinPhoto,
+    recoverBinPhoto
   } from '../api';
   
   const userStore = useUserStore();
@@ -434,6 +436,17 @@ const submitMatchUpload = async () => {
     });
   };
   
+  // 6. 恢复回收站图片
+  const handleRecoverBin = async (url) => {
+  try {
+    await recoverBinPhoto(url);
+    ElMessage.success('恢复成功，已放回历史列表');
+    fetchBin(); // 同样要刷新回收站
+  } catch (e) {
+    console.error(e);
+  }
+};
+
   // 6. 切换 Tab 时的自动刷新逻辑
   const handlePhotoTabClick = (tab) => {
     if (tab.paneName === 'history') {
