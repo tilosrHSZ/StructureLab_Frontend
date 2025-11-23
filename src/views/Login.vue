@@ -22,7 +22,7 @@
         <el-form-item>
           <el-button type="primary" @click="handleSubmit">{{ isLogin ? '登录' : '注册' }}</el-button>
           <el-button text @click="toggleMode">
-            去{{ isLogin ? '注册' : '登录' }}
+            {{ isLogin ? '注册' : '登录' }}
           </el-button>
         </el-form-item>
       </el-form>
@@ -103,5 +103,6 @@ const handleSubmit = async () => {
 }
 .box-card {
   width: 400px;
+  background-color: #ffffff;
 }
 </style>

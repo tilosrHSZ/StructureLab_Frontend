@@ -124,6 +124,58 @@
               </el-row>
             </el-tab-pane>
   
+          <!-- 功能四: 图片管理 (新增功能) -->
+          <el-tab-pane label="图片管理">
+            <el-tabs v-model="activePhotoTab" @tab-click="handlePhotoTabClick">
+              
+              <!-- 4.1 历史图片 -->
+              <el-tab-pane label="历史图片列表" name="history">
+                <el-button @click="fetchHistory" :icon="Refresh" circle style="margin-bottom: 10px;" />
+                
+                <div v-if="historyList.length === 0" style="color: #999; padding: 20px;">暂无历史图片</div>
+                
+                <div class="photo-grid">
+                  <div v-for="(url, index) in historyList" :key="index" class="photo-item">
+                    <el-image :src="url" fit="cover" :preview-src-list="[url]" style="width: 100%; height: 100%;" />
+                    <div class="photo-actions">
+                      <el-button type="danger" size="small" :icon="Delete" @click="handleDeleteHistory(url)">删除</el-button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 分页组件 -->
+                <div style="margin-top: 20px; display: flex; justify-content: center;">
+                  <el-pagination
+                    background
+                    layout="prev, pager, next"
+                    :total="historyTotal"
+                    :page-size="historyPageSize"
+                    :current-page="historyPageNum"
+                    @current-change="handlePageChange"
+                  />
+                </div>
+              </el-tab-pane>
+
+              <!-- 4.2 回收站 -->
+              <el-tab-pane label="回收站 (30天自动清理)" name="bin">
+                <el-button @click="fetchBin" :icon="Refresh" circle style="margin-bottom: 10px;" />
+                <el-alert title="这里的图片会在30天后自动清除" type="warning" :closable="false" style="margin-bottom: 10px;"/>
+                
+                <div v-if="binList.length === 0" style="color: #999; padding: 20px;">回收站是空的</div>
+
+                <div class="photo-grid">
+                  <div v-for="(url, index) in binList" :key="index" class="photo-item">
+                    <el-image :src="url" fit="cover" :preview-src-list="[url]" style="width: 100%; height: 100%; opacity: 0.7;" />
+                    <div class="photo-actions">
+                      <el-button type="danger" size="small" @click="handleDeleteBin(url)">彻底删除</el-button>
+                    </div>
+                  </div>
+                </div>
+              </el-tab-pane>
+
+            </el-tabs>
+          </el-tab-pane>
+
           </el-tabs>
         </el-main>
       </el-container>
@@ -134,26 +186,30 @@
   import { ref, reactive, onMounted } from 'vue';
   import { useUserStore } from '../stores/user';
   import { useRouter } from 'vue-router';
-  import { Minus } from '@element-plus/icons-vue';
-  import { ElMessage, ElNotification } from 'element-plus';
+  import { Minus, Delete, Refresh } from '@element-plus/icons-vue';
+  import { ElMessage, ElNotification, ElMessageBox } from 'element-plus';
   import { 
     updateUser, 
     uploadCategory, 
     downloadCategory, 
     uploadMatch, 
-    downloadMatch 
+    downloadMatch,
+    getHistoryPhotos,
+    deleteHistoryPhoto,
+    getRecycleBin,
+    deleteBinPhoto
   } from '../api';
   
   const userStore = useUserStore();
   const router = useRouter();
   
-  // --- 退出登录 ---
+  // 退出登录
   const handleLogout = () => {
     userStore.logout();
     router.push('/login');
   };
   
-  // --- 用户信息修改 ---
+  // 用户信息修改
   const userForm = reactive({
     username: userStore.username,
     password: '',
@@ -176,7 +232,7 @@
   }
   };
   
-  // --- 图片分类逻辑 ---
+  // 图片分类逻辑
   const categoryUpload = reactive({
   // idNum 删掉，前端不维护了
   descriptions: [''],
@@ -240,7 +296,7 @@ const submitCategoryUpload = async () => {
     }
   };
   
-  // --- 描述配对逻辑 ---
+  // 描述配对逻辑
   const matchUpload = reactive({
   description: ''
   // idNum 删掉
@@ -290,7 +346,7 @@ const submitMatchUpload = async () => {
     }
   };
   
-  // --- 通用轮询工具 ---
+  // 通用轮询工具
   // 每隔 5 秒查询一次，尝试 20 次（即100秒内）
   const startPolling = (apiFunc, interval = 5000, maxRetries = 20) => {
     let count = 0;
@@ -304,15 +360,109 @@ const submitMatchUpload = async () => {
     }, interval);
   };
   
+
+  // 图片管理逻辑 (历史 & 回收站) 
+  // Tab 激活状态
+  const activePhotoTab = ref('history');
+  
+  // --- 4.1 历史图片相关变量 ---
+  const historyList = ref([]);
+  const historyTotal = ref(0);
+  const historyPageNum = ref(1);
+  const historyPageSize = ref(10); // 每页显示 10 张
+  
+  // --- 4.2 回收站相关变量 ---
+  const binList = ref([]);
+  
+  // 1. 获取历史图片列表
+  const fetchHistory = async () => {
+    try {
+      const res = await getHistoryPhotos({
+        pageNum: historyPageNum.value,
+        pageSize: historyPageSize.value
+      });
+      // 确保 total 转为数字，防止后端返回字符串
+      historyTotal.value = Number(res.data.total);
+      // 如果 photoList 是空或 undefined，给个空数组
+      historyList.value = res.data.photoList || [];
+    } catch (e) {
+      console.error(e);
+    }
+  };
+  
+  // 2. 翻页处理
+  const handlePageChange = (newPage) => {
+    historyPageNum.value = newPage;
+    fetchHistory();
+  };
+  
+  // 3. 删除历史图片 (移入回收站)
+  const handleDeleteHistory = (url) => {
+    ElMessageBox.confirm(
+      '确定要删除这张图片吗？它将被移入回收站。',
+      '删除确认',
+      { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' }
+    ).then(async () => {
+      try {
+        await deleteHistoryPhoto(url); 
+        ElMessage.success('已移入回收站');
+        fetchHistory(); // 刷新列表
+      } catch (e) {}
+    });
+  };
+  
+  // 4. 获取回收站列表
+  const fetchBin = async () => {
+    try {
+      const res = await getRecycleBin();
+      binList.value = res.data.photoList || [];
+    } catch (e) {}
+  };
+  
+  // 5. 彻底删除回收站图片
+  const handleDeleteBin = (url) => {
+    ElMessageBox.confirm(
+      '这将永久删除该图片，无法恢复，确定吗？',
+      '彻底删除',
+      { confirmButtonText: '永久删除', cancelButtonText: '取消', type: 'error' }
+    ).then(async () => {
+      try {
+        await deleteBinPhoto(url);
+        ElMessage.success('已彻底删除');
+        fetchBin(); // 刷新回收站
+      } catch (e) {}
+    });
+  };
+  
+  // 6. 切换 Tab 时的自动刷新逻辑
+  const handlePhotoTabClick = (tab) => {
+    if (tab.paneName === 'history') {
+      fetchHistory();
+    } else if (tab.paneName === 'bin') {
+      fetchBin();
+    }
+  };
+
   onMounted(() => {
     if (!userStore.username) {
       ElMessage.error('请先登录');
       router.push('/login');
+      return
     }
+
+     // 初始化：加载第一页历史图片
+     fetchHistory();
   });
   </script>
   
   <style scoped>
+  .dashboard {
+    min-height: 100vh; 
+    display: flex;
+    flex-direction: column;
+    background: #ced2d7; 
+  }
+
   .header {
     display: flex;
     justify-content: space-between;
@@ -321,7 +471,43 @@ const submitMatchUpload = async () => {
     color: white;
   }
   .result-group {
-    border-bottom: 1px dashed #599f7c;
+    border-bottom: 1px dashed #ccc;
     padding: 10px 0;
+  }
+    /* 网格容器：自动适应宽度，每列最小 150px */
+  .photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+  }
+  
+  /* 单张图片卡片容器 */
+  .photo-item {
+    position: relative;
+    height: 150px; /* 固定高度，确保整齐 */
+    border: 1px solid #eee;
+    border-radius: 4px;
+    overflow: hidden;
+    background-color: #f5f7fa;
+  }
+  
+  /* 悬停效果：鼠标放上去显示操作按钮 */
+  .photo-actions {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0,0,0,0.6); /* 半透明黑色背景 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 40px;
+    opacity: 0; /* 默认隐藏 */
+    transition: opacity 0.3s;
+  }
+  
+  .photo-item:hover .photo-actions {
+    opacity: 1; /* hover 时显示 */
   }
   </style>

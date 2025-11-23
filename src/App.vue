@@ -8,6 +8,12 @@ import { RouterView } from 'vue-router'
 </template>
 
 <style>
+:root {
+  /* 主色：比如改成紫色 */
+  --el-color-primary: #6295d3; 
+  --el-color-success: #599f7c; 
+  --el-color-danger: #d17373; 
+}
 /* 全局样式重置：确保页面能撑满屏幕，没有默认的白边 */
 html, body, #app {
   margin: 0;
