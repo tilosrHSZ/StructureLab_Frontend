@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # StructureFrontend
 
 This template should help get you started developing with Vue 3 in Vite.
@@ -40,3 +41,6 @@ npm run dev
 ```sh
 npm run build
 ```
+=======
+# StructureLab_Frontend
+>>>>>>> b014ff9f601f2c5f1e536505d859ac8321c2b594

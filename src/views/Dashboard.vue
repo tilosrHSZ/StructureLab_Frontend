@@ -4,7 +4,7 @@
         <el-header class="header">
           <h2>Vue3 接口对接演示系统</h2>
           <div>
-            <span>欢迎, {{ userStore.username }}</span>
+            <span>欢迎, {{ userStore.name || userStore.username }}</span>
             <el-button type="danger" size="small" style="margin-left: 10px" @click="handleLogout">退出</el-button>
           </div>
         </el-header>
@@ -18,8 +18,8 @@
                 <el-form-item label="原账号名">
                   <el-input v-model="userForm.username" disabled />
                 </el-form-item>
-                <el-form-item label="新昵称(Name)">
-                  <el-input v-model="userForm.name" />
+                <el-form-item label="新昵称">
+                  <el-input v-model="userForm.name" placeholder="请输入你的昵称" />
                 </el-form-item>
                 <el-form-item label="新密码">
                   <el-input v-model="userForm.password" type="password" />
@@ -36,10 +36,7 @@
               <el-row :gutter="20">
                 <el-col :span="12">
                   <el-card header="上传任务">
-                    <el-form label-width="100px">
-                      <el-form-item label="任务ID">
-                         <el-input v-model="categoryUpload.idNum" placeholder="例如: 1" type="number"/>
-                      </el-form-item>
+                    <el-form label-width="80px">
                       
                       <el-form-item label="描述列表">
                         <!-- 简单的动态添加描述 -->
@@ -62,13 +59,13 @@
                 
                 <el-col :span="12">
                   <el-card header="结果查询 (轮询)">
-                    <el-input v-model="categoryQueryId" placeholder="输入要查询的 idNum" style="margin-bottom: 10px;">
+                    <el-input v-model="categoryQueryId" placeholder="上传成功后自动获取ID" style="margin-bottom: 10px;" readonly>
                       <template #append>
-                        <el-button @click="checkCategoryResult">手动查询</el-button>
+                        <el-button @click="checkCategoryResult">刷新状态</el-button>
                       </template>
                     </el-input>
                     
-                    <el-alert title="点击上传后，您可以稍后在此手动查询，或等待自动通知" type="info" :closable="false" show-icon />
+                    <el-alert title="上传后自动填入ID并轮询" type="info" :closable="false" show-icon />
                     
                     <div v-if="categoryResult" style="margin-top: 20px;">
                       <h3>分类结果：</h3>
@@ -96,9 +93,6 @@
                 <el-col :span="12">
                   <el-card header="上传描述">
                     <el-form label-width="80px">
-                      <el-form-item label="任务ID">
-                         <el-input v-model="matchUpload.idNum" placeholder="例如: 2" type="number"/>
-                      </el-form-item>
                       <el-form-item label="描述文本">
                          <el-input v-model="matchUpload.description" type="textarea" :rows="4" />
                       </el-form-item>
@@ -109,7 +103,7 @@
                 
                 <el-col :span="12">
                   <el-card header="配对结果">
-                     <el-input v-model="matchQueryId" placeholder="输入要查询的 idNum" style="margin-bottom: 10px;">
+                     <el-input v-model="matchQueryId" placeholder="上传后自动获取ID" style="margin-bottom: 10px;">
                       <template #append>
                         <el-button @click="checkMatchResult">查询结果</el-button>
                       </template>
@@ -164,60 +158,63 @@
     username: userStore.username,
     password: '',
     phoneNum: '',
-    name: ''
+    name: userStore.name
   });
   
   const handleUpdateUser = async () => {
     try {
-      await updateUser(userForm);
-      ElMessage.success('修改成功');
-    } catch (e) {
-      // 错误已在拦截器处理
-    }
+    // 调用后端接口
+    await updateUser(userForm);
+    
+    // 3. 核心修改：接口成功后，手动更新前端 Store 的状态
+    // 因为后端只返回了 "success"，没返回新的 name，所以我们得拿自己填在表单里的 userForm.name 去更新
+    userStore.updateUserInfo(userForm.name);
+    
+    ElMessage.success('修改成功');
+  } catch (e) {
+    // 错误已在拦截器处理
+  }
   };
   
   // --- 图片分类逻辑 ---
   const categoryUpload = reactive({
-    idNum: '', // 前端生成的ID
-    descriptions: [''],
-    files: []
-  });
-  const categoryQueryId = ref('');
-  const categoryResult = ref(null);
-  
-  const addDesc = () => categoryUpload.descriptions.push('');
-  const removeDesc = (index) => categoryUpload.descriptions.splice(index, 1);
-  const handleFileChange = (e) => {
-    categoryUpload.files = Array.from(e.target.files);
-  };
-  
-  const submitCategoryUpload = async () => {
-    if (!categoryUpload.idNum || categoryUpload.files.length === 0) {
-      return ElMessage.warning('请填写ID并选择图片');
-    }
-  
-    const formData = new FormData();
-    formData.append('username', userStore.username);
-    formData.append('idNum', categoryUpload.idNum);
-    // 文档要求 descriptionList 是 JSON 字符串
-    formData.append('descriptionList', JSON.stringify(categoryUpload.descriptions));
+  // idNum 删掉，前端不维护了
+  descriptions: [''],
+  files: []
+});
+const categoryQueryId = ref('');
+const categoryResult = ref(null);
+
+const addDesc = () => categoryUpload.descriptions.push('');
+const removeDesc = (index) => categoryUpload.descriptions.splice(index, 1);
+const handleFileChange = (e) => { categoryUpload.files = Array.from(e.target.files); };
+
+const submitCategoryUpload = async () => {
+  if (categoryUpload.files.length === 0) return ElMessage.warning('请选择图片');
+
+  const formData = new FormData();
+  formData.append('username', userStore.username);
+  // 注意：不再 append idNum
+  formData.append('descriptionList', JSON.stringify(categoryUpload.descriptions));
+  categoryUpload.files.forEach(file => formData.append('photoList', file));
+
+  try {
+    const res = await uploadCategory(formData);
     
-    // 文档要求 files 字段名为 photoList
-    categoryUpload.files.forEach(file => {
-      formData.append('photoList', file);
-    });
-  
-    try {
-      await uploadCategory(formData);
-      ElMessage.success('上传成功，系统正在处理...');
-      // 自动设置查询ID
-      categoryQueryId.value = categoryUpload.idNum;
-      // 开启轮询 (Simple Polling)
-      startPolling(checkCategoryResult);
-    } catch (e) {
-      console.error(e);
-    }
-  };
+    // 获取后端返回的 ID
+    const newId = res.data.idNum; 
+    ElMessage.success(`上传成功! 任务ID: ${newId}`);
+    
+    // 自动填入查询框
+    categoryQueryId.value = newId;
+    categoryResult.value = null; // 清空旧结果
+    
+    // 开始轮询
+    startPolling(checkCategoryResult);
+  } catch (e) {
+    console.error(e);
+  }
+};
   
   const checkCategoryResult = async () => {
     if (!categoryQueryId.value) return;
@@ -245,24 +242,32 @@
   
   // --- 描述配对逻辑 ---
   const matchUpload = reactive({
-    idNum: '',
-    description: ''
-  });
-  const matchQueryId = ref('');
-  const matchResult = ref([]);
+  description: ''
+  // idNum 删掉
+});
+const matchQueryId = ref('');
+const matchResult = ref([]);
+
+const submitMatchUpload = async () => {
+  if(!matchUpload.description) return ElMessage.warning('请输入描述');
   
-  const submitMatchUpload = async () => {
-    try {
-      await uploadMatch({
-        username: userStore.username,
-        idNum: matchUpload.idNum,
-        description: matchUpload.description
-      });
-      ElMessage.success('上传成功，请稍后查询');
-      matchQueryId.value = matchUpload.idNum;
-      startPolling(checkMatchResult);
-    } catch (e) {}
-  };
+  try {
+    const res = await uploadMatch({
+      username: userStore.username,
+      description: matchUpload.description
+      // 不传 idNum
+    });
+    
+    // 获取后端返回的 ID
+    const newId = res.data.idNum;
+    ElMessage.success(`上传成功! 任务ID: ${newId}`);
+    
+    matchQueryId.value = newId;
+    matchResult.value = []; // 清空
+    
+    startPolling(checkMatchResult);
+  } catch (e) {}
+};
   
   const checkMatchResult = async () => {
     if (!matchQueryId.value) return;
@@ -312,11 +317,11 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #409EFF;
+    background: #599f7c;
     color: white;
   }
   .result-group {
-    border-bottom: 1px dashed #ccc;
+    border-bottom: 1px dashed #599f7c;
     padding: 10px 0;
   }
   </style>

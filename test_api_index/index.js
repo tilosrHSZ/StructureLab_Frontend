@@ -14,7 +14,7 @@ export const register = (data) => {
   return request({
     url: '/user/register',
     method: 'post',
-    data // { username, password }
+    data // { username, password, phoneNum}
   });
 };
 

@@ -4,6 +4,10 @@ import request from '../utils/request';
 //  全功能 Mock 版 API (用于无后端测试)
 // ==========================================
 
+// 模拟数据库的计数器 (刷新页面后会重置为0)
+let categoryTaskCounter = 0;
+let matchTaskCounter = 0;
+
 // 1. 模拟登录
 export const login = (data) => {
   return new Promise((resolve) => {
@@ -13,19 +17,18 @@ export const login = (data) => {
         code: 1,
         msg: "success",
         data: {
-          // 模拟后端返回用户信息和 token
           username: data.username,
           token: "mock-token-" + Date.now() 
         }
       });
-    }, 800); // 模拟 0.8秒 网络延迟
+    }, 800); 
   });
 };
 
-// 2. 模拟注册
+// 2. 模拟注册 (支持手机号打印)
 export const register = (data) => {
   return new Promise((resolve) => {
-    console.log('>> [Mock] 正在注册:', data);
+    console.log('>> [Mock] 正在注册，提交的数据:', data);
     setTimeout(() => {
       resolve({ code: 1, msg: "注册成功" });
     }, 800);
@@ -46,52 +49,45 @@ export const updateUser = (data) => {
 //  核心功能测试：图片分类
 // ------------------------------------------------
 
-// 4. 模拟上传图片 (返回任务ID)
+// 4. 模拟上传图片 (返回简单数字ID: 1, 2, 3...)
 export const uploadCategory = (formData) => {
   return new Promise((resolve) => {
     console.log('>> [Mock] 正在上传图片...');
-    // 打印一下 FormData 里的东西，证明文件传进来了
-    for (var pair of formData.entries()) {
-       console.log(pair[0] + ', ' + pair[1]); 
-    }
-
+    // 计数器 +1
+    categoryTaskCounter++;
+    
     setTimeout(() => {
       resolve({
         code: 1,
         msg: "success",
         data: {
-          // 返回一个随机的任务ID
-          idNum: "Task-" + Math.floor(Math.random() * 1000)
+          // 这里直接返回计数器的值，模拟第几次上传
+          idNum: categoryTaskCounter 
         }
       });
-    }, 1500); // 上传通常比较慢，模拟 1.5秒
+    }, 1500); 
   });
 };
 
-// 5. 模拟获取结果 (包含轮询逻辑)
-// 逻辑：随机让它失败几次，模拟 AI 正在处理中，最后成功返回图片
+// 5. 模拟获取结果 (POST请求)
 export const downloadCategory = (data) => {
-  return new Promise((resolve, reject) => {
-    console.log(`>> [Mock] 查询任务结果 ID: ${data.idNum}`);
+  return new Promise((resolve) => {
+    console.log(`>> [Mock] 查询分类结果 ID: ${data.idNum}`);
     
     setTimeout(() => {
-      // 设定 70% 的概率成功，30% 的概率还在处理中 (模拟轮询效果)
+      // 模拟随机成功 (30%概率还在处理中)
       const isReady = Math.random() > 0.3; 
 
       if (isReady) {
-        console.log("   -> [Mock] AI 处理完成，返回结果");
         resolve({
           code: 1,
           msg: "success",
           data: {
-            // 这里返回可以在浏览器显示的占位图
             result: [
-              // 第一组描述对应的图片
               [
                 "https://via.placeholder.com/200/FF0000/FFFFFF?text=Cat_A",
                 "https://via.placeholder.com/200/AA0000/FFFFFF?text=Cat_B"
               ],
-              // 第二组描述对应的图片
               [
                 "https://via.placeholder.com/200/0000FF/FFFFFF?text=Dog_A"
               ]
@@ -99,8 +95,7 @@ export const downloadCategory = (data) => {
           }
         });
       } else {
-        console.log("   -> [Mock] AI 处理中... (模拟返回失败，触发前端重试)");
-        // 模拟后端还在处理，返回非1的code，或者直接 reject
+        // 模拟处理中
         resolve({ code: 0, msg: "Processing" });
       }
     }, 500);
@@ -111,26 +106,31 @@ export const downloadCategory = (data) => {
 //  核心功能测试：描述配对
 // ------------------------------------------------
 
-// 6. 模拟上传描述
+// 6. 模拟上传描述 (返回简单数字ID: 1, 2, 3...)
 export const uploadMatch = (data) => {
   return new Promise((resolve) => {
     console.log('>> [Mock] 上传描述:', data);
+    // 计数器 +1
+    matchTaskCounter++;
+
     setTimeout(() => {
       resolve({ 
         code: 1, 
         msg: "success", 
-        data: { idNum: data.idNum } 
+        data: { 
+            // 返回计数器的值
+            idNum: matchTaskCounter 
+        } 
       });
     }, 1000);
   });
 };
 
-// 7. 模拟获取配对结果
+// 7. 模拟获取配对结果 (POST请求)
 export const downloadMatch = (data) => {
   return new Promise((resolve) => {
     console.log(`>> [Mock] 查询配对结果 ID: ${data.idNum}`);
     setTimeout(() => {
-      // 这里直接返回成功，为了区分上面的轮询，这里一次成功
       resolve({
         code: 1,
         msg: "success",
