@@ -80,8 +80,6 @@ export const deleteHistoryPhoto = (photoUrl) => {
   return request({
     url: '/user/photos/delete',
     method: 'delete',
-    // 虽然文档说路径参数，但为了防止URL中的斜杠报错，建议用 params 传
-    // 最终请求类似于: /user/photos/delete?url=http://...
     params: { url: photoUrl } 
   });
 };

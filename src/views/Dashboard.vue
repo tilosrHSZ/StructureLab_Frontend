@@ -48,10 +48,33 @@
                       </el-form-item>
   
                       <el-form-item label="图片上传">
-                         <input type="file" multiple @change="handleFileChange" />
-                         <div v-if="categoryUpload.files.length">已选择 {{categoryUpload.files.length}} 张图片</div>
+                        <input type="file" multiple ref="fileInputRef" @change="handleFileChange" style="display: none;" />
+                        <el-button type="primary" plain @click="triggerFileInput">+ 选择/追加图片 </el-button>
+
+                        <!-- 待上传图片预览 -->
+                        <div v-if="categoryUpload.files.length > 0" class="upload-preview-area">
+                          <div class="preview-header">
+                            <span>待上传: {{ categoryUpload.files.length }} 张</span>
+                            <el-button type="danger" link size="small" @click="clearAllFiles">清空全部</el-button>
+                          </div>
+    
+                          <div class="preview-grid">
+                            <div v-for="(file, index) in categoryUpload.files" :key="index" class="preview-item">
+                              <!-- 显示图片缩略图 -->
+                              <el-image 
+                                :src="getObjectURL(file)" 
+                                fit="cover" 
+                                class="preview-img"
+                              />
+                              <!-- 删除按钮 -->
+                              <div class="preview-overlay">
+                              <el-icon class="delete-icon" @click="removeFile(index)"><Delete /></el-icon>
+                            </div>
+                          </div>
+                        </div>
+                       </div>
                       </el-form-item>
-                      
+
                       <el-button type="success" @click="submitCategoryUpload">上传并开始处理</el-button>
                     </el-form>
                   </el-card>
@@ -245,7 +268,32 @@ const categoryResult = ref(null);
 
 const addDesc = () => categoryUpload.descriptions.push('');
 const removeDesc = (index) => categoryUpload.descriptions.splice(index, 1);
-const handleFileChange = (e) => { categoryUpload.files = Array.from(e.target.files); };
+
+// 获取，文件选择
+const fileInputRef = ref(null);
+const triggerFileInput = () => {
+  fileInputRef.value.click();
+};
+
+const handleFileChange = (e) => { 
+  const selectedFiles = Array.from(e.target.files);
+  if (selectedFiles.length > 0) {
+    categoryUpload.files.push(...selectedFiles); 
+    e.target.value = '';
+  }
+};
+
+const removeFile = (index) => {
+  categoryUpload.files.splice(index, 1);
+};
+
+const clearAllFiles = () => {
+  categoryUpload.files = [];
+};
+
+const getObjectURL = (file) => {
+  return URL.createObjectURL(file);
+};
 
 const submitCategoryUpload = async () => {
   if (categoryUpload.files.length === 0) return ElMessage.warning('请选择图片');
@@ -523,4 +571,61 @@ const submitMatchUpload = async () => {
   .photo-item:hover .photo-actions {
     opacity: 1; /* hover 时显示 */
   }
+
+  /* 待上传预览区样式 */
+.upload-preview-area {
+  margin-top: 10px;
+  border: 1px dashed #dcdfe6;
+  border-radius: 4px;
+  padding: 10px;
+  width: 100%;
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+  gap: 8px;
+}
+
+.preview-item {
+  position: relative;
+  width: 100%;
+  height: 60px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #eee;
+}
+
+.preview-img {
+  width: 100%;
+  height: 100%;
+}
+
+/* 悬停显示删除按钮 */
+.preview-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+  cursor: pointer;
+}
+.preview-item:hover .preview-overlay {
+  opacity: 1;
+}
+.delete-icon {
+  color: white;
+  font-size: 18px;
+}
   </style>
