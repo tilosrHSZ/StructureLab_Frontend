@@ -141,12 +141,10 @@ export const downloadMatch = (data) => {
       resolve({
         code: 1,
         msg: "success",
-        data: {
-          photosList: [
-            "https://via.placeholder.com/200/008000/FFFFFF?text=Match_Result_1",
-            "https://via.placeholder.com/200/005000/FFFFFF?text=Match_Result_2"
+        data: [
+            "https://img2.baidu.com/it/u=3202947311,1189366315&fm=253&fmt=auto",
+            "https://p0.meituan.net/wedding/5d99616053303d35368a6f37803a08d2857434.jpg"
           ]
-        }
       });
     }, 800);
   });

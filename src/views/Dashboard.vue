@@ -382,8 +382,8 @@ const submitMatchUpload = async () => {
         username: userStore.username,
         idNum: matchQueryId.value
       });
-      if (res && res.data && res.data.photosList) {
-        matchResult.value = res.data.photosList;
+      matchResult.value = res.data || [];
+      if (matchResult.value.length > 0) {
         ElNotification({
           title: '配对成功',
           message: `任务 ${matchQueryId.value} 配对结果已获取`,

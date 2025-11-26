@@ -80,7 +80,9 @@ export const deleteHistoryPhoto = (photoUrl) => {
   return request({
     url: '/user/photos/delete',
     method: 'delete',
-    params: { url: photoUrl } 
+    data: { 
+      url: photoUrl 
+    }
   });
 };
 
@@ -97,7 +99,9 @@ export const deleteBinPhoto = (photoUrl) => {
   return request({
     url: '/user/photos/bin',
     method: 'delete',
-    params: { url: photoUrl }
+    data: { 
+      url: photoUrl 
+    }
   });
 };
 
@@ -105,7 +109,9 @@ export const deleteBinPhoto = (photoUrl) => {
 export const recoverBinPhoto = (photoUrl) => {
   return request({
     url: '/user/photos/bin',
-    method: 'post',
-    params: { url: photoUrl }
+    method: 'post', 
+    data: { 
+      url: photoUrl 
+    }v
   });
 };
