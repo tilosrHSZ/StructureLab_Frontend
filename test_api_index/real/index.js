@@ -112,6 +112,6 @@ export const recoverBinPhoto = (photoUrl) => {
     method: 'post', 
     data: { 
       url: photoUrl 
-    }v
+    }
   });
 };
